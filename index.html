@@ -79,12 +79,6 @@
       outline:none;
     }
     input:focus, select:focus{border-color: rgba(110,168,255,.65)}
-    .row{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
     .toggle{
       display:flex;
       align-items:center;
@@ -151,14 +145,23 @@
       color: var(--text);
       font-size:12px;
     }
-    .rightcol h2{margin-bottom:8px}
     .muted{color:var(--muted)}
+    .statusline{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background: rgba(17,26,46,.55);
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Finance Manager (CH)</h1>
-    <p>v1: Budget + Steuerrücklage + Monatsübersicht. Zielgruppe: Schweiz, ledig, keine Kinder, keine Kirchensteuer, ordentliche Veranlagung.</p>
+    <p>v1.2: PLZ → Gemeinde/Kanton automatisch. Steuern aktuell als Schätzung (bis Tarife/Steuerfüsse vollständig integriert sind).</p>
   </header>
 
   <main class="wrap">
@@ -173,18 +176,23 @@
         </div>
 
         <div>
-          <label>Postleitzahl (CH)</label>
-          <input id="plz" inputmode="numeric" placeholder="z. B. 3000" />
-          <div class="small">v1: PLZ wird gespeichert; Gemeinde-Zuordnung kommt in v2.</div>
+          <label>Brutto-Lohn pro Monat (optional, CHF)</label>
+          <input id="grossMonthly" inputmode="decimal" placeholder="z. B. 8000" />
+          <div class="small">Wenn leer: Brutto wird nicht „erraten“, sondern leer gelassen.</div>
         </div>
 
         <div>
-          <label>Kanton</label>
-          <select id="canton">
-            <option value="BE">BE – Bern</option>
-            <option value="ZH">ZH – Zürich</option>
-            <option value="OTHER">Andere (nur grobe Schätzung)</option>
+          <label>Postleitzahl (CH)</label>
+          <input id="plz" inputmode="numeric" placeholder="z. B. 3000" />
+          <div class="small">Wir ermitteln Gemeinde/Kanton automatisch via PLZ-Liste.</div>
+        </div>
+
+        <div>
+          <label>Ortschaft/Gemeinde (falls mehrere Treffer)</label>
+          <select id="placePick" disabled>
+            <option>PLZ eingeben…</option>
           </select>
+          <div class="small">Manche PLZ kommen mehrfach vor (verschiedene Ortschaften/Gemeinden).</div>
         </div>
 
         <div>
@@ -193,7 +201,14 @@
             <option value="2025">2025</option>
             <option value="2026">2026</option>
           </select>
-          <div class="small">v1 nutzt das Jahr nur als Label; Tarife kommen später.</div>
+        </div>
+
+        <div class="statusline" style="align-self:end;">
+          <div><span class="pill">Ermittelt</span></div>
+          <div class="small">
+            <div>Gemeinde: <span class="mono" id="outGemeinde">—</span></div>
+            <div>Kanton: <span class="mono" id="outKanton">—</span> | BFS: <span class="mono" id="outBfs">—</span></div>
+          </div>
         </div>
       </div>
 
@@ -287,20 +302,31 @@
 
       <div class="sep"></div>
       <div class="note">
-        <strong>Steuerlogik v1:</strong>
+        <strong>Wichtig:</strong>
         <div class="small" style="margin-top:6px; color:var(--text); opacity:.95">
-          v1 nutzt eine progressive Näherung (effektiver Steuersatz) basierend auf einem approximierten steuerbaren Einkommen.
-          In v2 integrieren wir echte Tarife (Bund/Kanton/Gemeinde) plus PLZ→Gemeinde.
+          Die Steuer hier ist aktuell eine <span class="mono">Schätzung</span>. Für „definitiv korrekt“ brauchen wir entweder (a) steuerbares Einkommen
+          oder (b) echte Tarife/Steuerfüsse vollständig integriert (Bund/Kanton/Gemeinde).
         </div>
       </div>
     </section>
 
-    <aside class="card rightcol">
+    <aside class="card">
       <h2>Ergebnis</h2>
 
       <div class="kpi">
         <div class="box">
-          <div class="muted">Steuer pro Jahr (Schätzung)</div>
+          <div class="muted">Netto-Jahreslohn</div>
+          <div class="v" id="netYearOut">CHF 0</div>
+          <div class="muted">12× Netto + 13. gemäss Auszahlung</div>
+        </div>
+        <div class="box">
+          <div class="muted">Brutto-Jahreslohn (optional)</div>
+          <div class="v" id="grossYearOut">—</div>
+          <div class="muted">nur wenn Brutto eingegeben</div>
+        </div>
+
+        <div class="box">
+          <div class="muted">Steuer total pro Jahr (Schätzung)</div>
           <div class="v" id="taxYearOut">CHF 0</div>
           <div class="muted" id="taxExplain">—</div>
         </div>
@@ -309,11 +335,17 @@
           <div class="v" id="taxMonthlyOut">CHF 0</div>
           <div class="muted">empfohlen: konstant zurücklegen</div>
         </div>
+
         <div class="box">
-          <div class="muted">Fixkosten pro Monat</div>
-          <div class="v" id="fixedMonthlyOut">CHF 0</div>
-          <div class="muted">Miete + Versicherungen + Fixkosten</div>
+          <div class="muted">Steuer-Aufteilung (in Arbeit)</div>
+          <div class="v" style="font-size:14px; line-height:1.35">
+            Bund: <span class="mono">—</span><br/>
+            Kanton: <span class="mono">—</span><br/>
+            Gemeinde: <span class="mono">—</span>
+          </div>
+          <div class="muted">wird mit echten Tarifen ergänzt</div>
         </div>
+
         <div class="box">
           <div class="muted">Übrig pro Monat (Ø)</div>
           <div class="v" id="freeMonthlyOut">CHF 0</div>
@@ -346,7 +378,11 @@
   </main>
 
   <script>
-    const STORAGE_KEY = "financeManagerCH_v1_2025_2026";
+    const STORAGE_KEY = "financeManagerCH_v12";
+
+    // ESTV Gemeindeliste (PLZ → Gemeinde/Kanton/BFS). Quelle: ESTV.
+    const ESTV_PLZ_CSV =
+      "https://www.estv.admin.ch/dam/estv/de/dokumente/qst/qst-gemeindeliste-2025-de.csv.download.csv/qst-gemeindeliste-2025-de.csv";
 
     const MONTHS = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 
@@ -364,26 +400,112 @@
 
     function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-    // v1: Näherung eines effektiven Steuersatzes (progressiv, grob).
-    // Parameter werden später durch echte Tarife ersetzt.
+    // v1: bewusst als Schätzung markiert
     function estimateEffectiveRate(taxableYear, canton){
       let base;
-      if (taxableYear <= 35000) base = 0.05;
-      else if (taxableYear <= 60000) base = 0.085;
-      else if (taxableYear <= 90000) base = 0.115;
-      else if (taxableYear <= 130000) base = 0.145;
-      else if (taxableYear <= 180000) base = 0.185;
-      else base = 0.225;
+      if (taxableYear <= 35000) base = 0.06;
+      else if (taxableYear <= 60000) base = 0.10;
+      else if (taxableYear <= 90000) base = 0.13;
+      else if (taxableYear <= 130000) base = 0.16;
+      else if (taxableYear <= 180000) base = 0.20;
+      else base = 0.24;
 
-      // Minimale Differenzierung (nur als Platzhalter):
+      // minimale kantonale Differenz (nur Näherung)
       const cantonAdj = (canton === "ZH") ? -0.004 : (canton === "BE" ? +0.004 : 0.00);
-      return clamp(base + cantonAdj, 0.03, 0.30);
+      return clamp(base + cantonAdj, 0.03, 0.32);
+    }
+
+    // --- PLZ → Gemeinde/Kanton/BFS ---
+    let plzIndexLoaded = false;
+    let plzRows = []; // [{ort,plz,gemeinde,bfs,kt,validFrom}]
+    let currentMatches = [];
+    let selectedMatch = null;
+
+    function parseCsvLine(line){
+      // CSV ist semikolon-separiert
+      // Ortschaftsname;PLZ;Gemeindename;BFS-Nr;Kantonskürzel;Gültig ab
+      const parts = line.split(";");
+      return {
+        ort: (parts[0] || "").trim(),
+        plz: (parts[1] || "").trim(),
+        gemeinde: (parts[2] || "").trim(),
+        bfs: (parts[3] || "").trim(),
+        kt: (parts[4] || "").trim(),
+        validFrom: (parts[5] || "").trim()
+      };
+    }
+
+    async function loadPlzIndexOnce(){
+      if (plzIndexLoaded) return;
+      const res = await fetch(ESTV_PLZ_CSV, { cache: "no-store" });
+      if (!res.ok) throw new Error("PLZ-Liste konnte nicht geladen werden.");
+      const text = await res.text();
+
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      // erste Zeile ist Header
+      const dataLines = lines.slice(1);
+      plzRows = dataLines.map(parseCsvLine).filter(r => r.plz);
+      plzIndexLoaded = true;
+    }
+
+    function updatePlacePicker(matches){
+      const sel = document.getElementById("placePick");
+      sel.innerHTML = "";
+
+      if (!matches.length){
+        sel.disabled = true;
+        sel.innerHTML = "<option>Keine Treffer</option>";
+        return;
+      }
+
+      sel.disabled = matches.length === 1;
+
+      matches.forEach((m, idx) => {
+        const opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = `${m.ort} → ${m.gemeinde} (${m.kt})`;
+        sel.appendChild(opt);
+      });
+
+      sel.value = "0";
+    }
+
+    function setSelectedMatchByIndex(idx){
+      selectedMatch = currentMatches[idx] || null;
+
+      document.getElementById("outGemeinde").textContent = selectedMatch ? selectedMatch.gemeinde : "—";
+      document.getElementById("outKanton").textContent = selectedMatch ? selectedMatch.kt : "—";
+      document.getElementById("outBfs").textContent = selectedMatch ? selectedMatch.bfs : "—";
+    }
+
+    async function onPlzChanged(){
+      const plz = (document.getElementById("plz").value || "").trim();
+      if (plz.length < 4){
+        currentMatches = [];
+        updatePlacePicker(currentMatches);
+        setSelectedMatchByIndex(0);
+        compute();
+        return;
+      }
+
+      try{
+        await loadPlzIndexOnce();
+        currentMatches = plzRows.filter(r => r.plz === plz);
+        updatePlacePicker(currentMatches);
+        setSelectedMatchByIndex(0);
+      }catch(e){
+        currentMatches = [];
+        updatePlacePicker(currentMatches);
+        setSelectedMatchByIndex(0);
+      }
+
+      compute();
     }
 
     function compute(){
       const netMonthly = num(document.getElementById("netMonthly").value);
-      const plz = (document.getElementById("plz").value || "").trim();
-      const canton = document.getElementById("canton").value;
+      const grossMonthly = num(document.getElementById("grossMonthly").value);
+
       const taxYear = document.getElementById("taxYear").value;
 
       const rentMonthly = num(document.getElementById("rentMonthly").value);
@@ -395,21 +517,25 @@
       const deductionsYearly = customDeductions ? num(document.getElementById("deductionsYearly").value) : 0;
       const extraTaxableYearly = customDeductions ? num(document.getElementById("extraTaxableYearly").value) : 0;
 
-      // 13. Monatslohn Konfiguration
+      // 13. Monatslohn
       const m13_1_month = Number(document.getElementById("m13_1_month").value || 0);
       const m13_2_month = Number(document.getElementById("m13_2_month").value || 0);
       const m13_1_pct = clamp(num(document.getElementById("m13_1_pct").value), 0, 100);
       const m13_2_pct = clamp(num(document.getElementById("m13_2_pct").value), 0, 100);
 
-      // Jahres-Netto: 12x Netto + 13. (wenn Prozent-Summe > 0)
-      // 13. entspricht einem zusätzlichen Netto-Monatslohn * (Summe % / 100)
       const thirteenthFactor = (m13_1_pct + m13_2_pct) / 100;
       const netYear = (netMonthly * 12) + (netMonthly * thirteenthFactor);
 
-      // Pauschalabzug (v1): grob 8% vom Netto-Jahr, begrenzt
+      // Brutto-Jahr (optional)
+      const grossYear = grossMonthly > 0 ? (grossMonthly * 12) + (grossMonthly * thirteenthFactor) : null;
+
+      // Pauschalabzug (Schätzung)
       const standardDeduction = customDeductions ? 0 : clamp(netYear * 0.08, 4000, 12000);
 
-      // v1: approximiertes steuerbares Einkommen (nur Näherung)
+      // Kanton aus PLZ
+      const canton = selectedMatch ? selectedMatch.kt : "OTHER";
+
+      // „taxableYear“ bleibt eine Näherung – klar markiert
       const taxableYear = Math.max(0, netYear + extraTaxableYearly - (customDeductions ? deductionsYearly : standardDeduction));
 
       const effRate = estimateEffectiveRate(taxableYear, canton);
@@ -419,22 +545,24 @@
       const fixedMonthly = rentMonthly + healthMonthly + insMonthly + otherFixedMonthly;
       const freeMonthlyAvg = netMonthly - fixedMonthly - taxMonthlyReserve;
 
-      // Outputs (KPIs)
+      // Outputs
+      document.getElementById("netYearOut").textContent = chf(netYear);
+      document.getElementById("grossYearOut").textContent = grossYear === null ? "—" : chf(grossYear);
+
       document.getElementById("taxYearOut").textContent = chf(taxYearEst);
       document.getElementById("taxMonthlyOut").textContent = chf(taxMonthlyReserve);
-      document.getElementById("fixedMonthlyOut").textContent = chf(fixedMonthly);
       document.getElementById("freeMonthlyOut").textContent = chf(freeMonthlyAvg);
 
-      const baseExplain = customDeductions
-        ? `Jahr ${taxYear} | PLZ ${plz || "—"} | steuerbar≈Netto-Jahr + Zusatz − Abzüge | eff. Satz≈${(effRate*100).toFixed(1)}%`
-        : `Jahr ${taxYear} | PLZ ${plz || "—"} | pauschaler Abzug≈${chf(standardDeduction)} | eff. Satz≈${(effRate*100).toFixed(1)}%`;
-      document.getElementById("taxExplain").textContent = baseExplain;
+      const placeStr = selectedMatch ? `${selectedMatch.gemeinde} (${selectedMatch.kt})` : "—";
+      const explain = customDeductions
+        ? `Jahr ${taxYear} | Ort: ${placeStr} | steuerbar≈Netto-Jahr + Zusatz − Abzüge | eff. Satz≈${(effRate*100).toFixed(1)}% (Schätzung)`
+        : `Jahr ${taxYear} | Ort: ${placeStr} | pauschaler Abzug≈${chf(standardDeduction)} | eff. Satz≈${(effRate*100).toFixed(1)}% (Schätzung)`;
+      document.getElementById("taxExplain").textContent = explain;
 
       // Monats-Cashflow
       const tbody = document.getElementById("cashflowBody");
       tbody.innerHTML = "";
 
-      // 13. Auszahlung je Monat
       const add13 = Array(12).fill(0);
       if (m13_1_month >= 1 && m13_1_month <= 12) add13[m13_1_month - 1] += netMonthly * (m13_1_pct / 100);
       if (m13_2_month >= 1 && m13_2_month <= 12) add13[m13_2_month - 1] += netMonthly * (m13_2_pct / 100);
@@ -462,13 +590,13 @@
 
     function save(){
       const ids = [
-        "netMonthly","plz","canton","taxYear",
+        "netMonthly","grossMonthly","plz","placePick","taxYear",
         "rentMonthly","healthMonthly","insMonthly","otherFixedMonthly",
         "deductionsYearly","extraTaxableYearly",
         "m13_1_month","m13_1_pct","m13_2_month","m13_2_pct"
       ];
       const data = {};
-      ids.forEach(id => data[id] = document.getElementById(id).value);
+      ids.forEach(id => data[id] = (document.getElementById(id) ? document.getElementById(id).value : ""));
       data.customDeductions = document.getElementById("customDeductions").checked;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -498,10 +626,19 @@
     document.getElementById("resetBtn").addEventListener("click", resetAll);
 
     document.getElementById("customDeductions").addEventListener("change", () => { syncDeductionsUI(); compute(); });
+    document.getElementById("plz").addEventListener("input", () => { onPlzChanged(); });
 
+    document.getElementById("placePick").addEventListener("change", (e) => {
+      const idx = Number(e.target.value || 0);
+      setSelectedMatchByIndex(idx);
+      compute();
+    });
+
+    // initial
     load();
     syncDeductionsUI();
-    compute();
+    onPlzChanged();
   </script>
 </body>
 </html>
+
