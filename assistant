@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance Manager CH</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#111a2e;
+      --muted:#9fb0d0;
+      --text:#eef2ff;
+      --line:rgba(255,255,255,.10);
+      --accent:#6ea8ff;
+      --warn:#fbbf24;
+      --ok:#2dd4bf;
+      --bad:#fb7185;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 20% 10%, rgba(110,168,255,.18), transparent 60%),
+                  radial-gradient(900px 450px at 80% 20%, rgba(45,212,191,.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:28px 18px 10px;
+      max-width:1180px;
+      margin:0 auto;
+    }
+    h1{margin:0 0 6px; font-size:22px; letter-spacing:.2px}
+    p{margin:0; color:var(--muted); line-height:1.45}
+    .wrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap:16px;
+    }
+    @media (max-width: 980px){
+      .wrap{grid-template-columns:1fr}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .card h2{
+      margin:0 0 12px;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 640px){
+      .grid{grid-template-columns:1fr}
+    }
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px;
+    }
+    input, select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background: rgba(17,26,46,.75);
+      color:var(--text);
+      outline:none;
+    }
+    input:focus, select:focus{border-color: rgba(110,168,255,.65)}
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background: rgba(17,26,46,.55);
+    }
+    .toggle input{width:auto}
+    .small{font-size:12px; color:var(--muted)}
+    .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    button{
+      border:1px solid var(--line);
+      background: rgba(110,168,255,.12);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    button:hover{border-color: rgba(110,168,255,.55)}
+    .danger{background: rgba(251,113,133,.10)}
+    .sep{height:1px; background:var(--line); margin:12px 0}
+    .note{
+      border-left:3px solid var(--warn);
+      padding:10px 12px;
+      background: rgba(251,191,36,.08);
+      border-radius:10px;
+      color:var(--text);
+    }
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    .kpi .box{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      background: rgba(17,26,46,.55);
+    }
+    .kpi .muted{color:var(--muted); font-size:12px}
+    .kpi .v{font-size:18px; margin-top:4px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    th, td{
+      padding:10px 8px;
+      border-bottom:1px solid var(--line);
+      text-align:right;
+      vertical-align:middle;
+      white-space:nowrap;
+    }
+    th:first-child, td:first-child{ text-align:left; }
+    .pill{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(110,168,255,.10);
+      color: var(--text);
+      font-size:12px;
+    }
+    .rightcol h2{margin-bottom:8px}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Finance Manager (CH)</h1>
+    <p>v1: Budget + Steuerrücklage + Monatsübersicht. Zielgruppe: Schweiz, ledig, keine Kinder, keine Kirchensteuer, ordentliche Veranlagung.</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Eingaben</h2>
+
+      <div class="grid">
+        <div>
+          <label>Netto-Lohn pro Monat (CHF)</label>
+          <input id="netMonthly" inputmode="decimal" placeholder="z. B. 6500" />
+          <div class="small">Netto = ausbezahlt (nach AHV/ALV/BVG etc.).</div>
+        </div>
+
+        <div>
+          <label>Postleitzahl (CH)</label>
+          <input id="plz" inputmode="numeric" placeholder="z. B. 3000" />
+          <div class="small">v1: PLZ wird gespeichert; Gemeinde-Zuordnung kommt in v2.</div>
+        </div>
+
+        <div>
+          <label>Kanton</label>
+          <select id="canton">
+            <option value="BE">BE – Bern</option>
+            <option value="ZH">ZH – Zürich</option>
+            <option value="OTHER">Andere (nur grobe Schätzung)</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Berechnungsjahr</label>
+          <select id="taxYear">
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+          <div class="small">v1 nutzt das Jahr nur als Label; Tarife kommen später.</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="toggle" style="margin-bottom:10px;">
+        <input type="checkbox" id="customDeductions" />
+        <div>
+          <div><strong>Abzüge manuell erfassen</strong> <span class="pill">optional</span></div>
+          <div class="small">Wenn aus: pauschaler Abzug (vereinfachtes Modell).</div>
+        </div>
+      </div>
+
+      <div id="deductionsBox" style="display:none;">
+        <div class="grid">
+          <div>
+            <label>Abzüge total pro Jahr (CHF)</label>
+            <input id="deductionsYearly" inputmode="decimal" placeholder="z. B. 9000" />
+          </div>
+          <div>
+            <label>Zusätzliche steuerbare Einkünfte pro Jahr (CHF)</label>
+            <input id="extraTaxableYearly" inputmode="decimal" placeholder="z. B. 0" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2>13. Monatslohn (konfigurierbar)</h2>
+      <div class="small" style="margin-bottom:10px;">
+        Beispiel: 50% im Juni und 50% im Dezember. Wenn du keinen 13. hast: alles auf 0 lassen.
+      </div>
+
+      <div class="grid">
+        <div>
+          <label>Auszahlung 1 – Monat</label>
+          <select id="m13_1_month">
+            <option value="0">—</option>
+            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mär</option><option value="4">Apr</option>
+            <option value="5">Mai</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option>
+            <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Dez</option>
+          </select>
+        </div>
+        <div>
+          <label>Auszahlung 1 – Prozent vom 13. (%)</label>
+          <input id="m13_1_pct" inputmode="decimal" placeholder="z. B. 50" />
+        </div>
+
+        <div>
+          <label>Auszahlung 2 – Monat</label>
+          <select id="m13_2_month">
+            <option value="0">—</option>
+            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mär</option><option value="4">Apr</option>
+            <option value="5">Mai</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option>
+            <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Dez</option>
+          </select>
+        </div>
+        <div>
+          <label>Auszahlung 2 – Prozent vom 13. (%)</label>
+          <input id="m13_2_pct" inputmode="decimal" placeholder="z. B. 50" />
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2>Fixkosten (Monat)</h2>
+      <div class="grid">
+        <div>
+          <label>Miete (CHF)</label>
+          <input id="rentMonthly" inputmode="decimal" placeholder="z. B. 1800" />
+        </div>
+        <div>
+          <label>Krankenkasse (CHF)</label>
+          <input id="healthMonthly" inputmode="decimal" placeholder="z. B. 350" />
+        </div>
+        <div>
+          <label>Weitere Versicherungen (CHF)</label>
+          <input id="insMonthly" inputmode="decimal" placeholder="z. B. 80" />
+        </div>
+        <div>
+          <label>Weitere Fixkosten (CHF)</label>
+          <input id="otherFixedMonthly" inputmode="decimal" placeholder="z. B. 450" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="calcBtn">Berechnen</button>
+        <button id="saveBtn">Eingaben speichern</button>
+        <button id="resetBtn" class="danger">Zurücksetzen</button>
+      </div>
+
+      <div class="sep"></div>
+      <div class="note">
+        <strong>Steuerlogik v1:</strong>
+        <div class="small" style="margin-top:6px; color:var(--text); opacity:.95">
+          v1 nutzt eine progressive Näherung (effektiver Steuersatz) basierend auf einem approximierten steuerbaren Einkommen.
+          In v2 integrieren wir echte Tarife (Bund/Kanton/Gemeinde) plus PLZ→Gemeinde.
+        </div>
+      </div>
+    </section>
+
+    <aside class="card rightcol">
+      <h2>Ergebnis</h2>
+
+      <div class="kpi">
+        <div class="box">
+          <div class="muted">Steuer pro Jahr (Schätzung)</div>
+          <div class="v" id="taxYearOut">CHF 0</div>
+          <div class="muted" id="taxExplain">—</div>
+        </div>
+        <div class="box">
+          <div class="muted">Steuer-Rücklage pro Monat</div>
+          <div class="v" id="taxMonthlyOut">CHF 0</div>
+          <div class="muted">empfohlen: konstant zurücklegen</div>
+        </div>
+        <div class="box">
+          <div class="muted">Fixkosten pro Monat</div>
+          <div class="v" id="fixedMonthlyOut">CHF 0</div>
+          <div class="muted">Miete + Versicherungen + Fixkosten</div>
+        </div>
+        <div class="box">
+          <div class="muted">Übrig pro Monat (Ø)</div>
+          <div class="v" id="freeMonthlyOut">CHF 0</div>
+          <div class="muted">Netto − Fixkosten − Steuer-Rücklage</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2>Monatsübersicht (Cashflow)</h2>
+      <div class="small muted" style="margin-bottom:8px;">
+        Netto inkl. 13.-Auszahlung(en) in den gewählten Monaten. Steuer wird als monatliche Rücklage verteilt.
+      </div>
+
+      <div style="overflow:auto; border:1px solid var(--line); border-radius:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Monat</th>
+              <th>Netto</th>
+              <th>Fixkosten</th>
+              <th>Steuer-RL</th>
+              <th>Übrig</th>
+            </tr>
+          </thead>
+          <tbody id="cashflowBody"></tbody>
+        </table>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "financeManagerCH_v1_2025_2026";
+
+    const MONTHS = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+
+    function chf(x){
+      if (!isFinite(x)) x = 0;
+      return "CHF " + Math.round(x).toLocaleString("de-CH");
+    }
+
+    function num(v){
+      if (v === null || v === undefined) return 0;
+      const s = String(v).replace(/\s/g,"").replace(",",".");
+      const n = Number(s);
+      return isFinite(n) ? n : 0;
+    }
+
+    function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+
+    // v1: Näherung eines effektiven Steuersatzes (progressiv, grob).
+    // Parameter werden später durch echte Tarife ersetzt.
+    function estimateEffectiveRate(taxableYear, canton){
+      let base;
+      if (taxableYear <= 35000) base = 0.05;
+      else if (taxableYear <= 60000) base = 0.085;
+      else if (taxableYear <= 90000) base = 0.115;
+      else if (taxableYear <= 130000) base = 0.145;
+      else if (taxableYear <= 180000) base = 0.185;
+      else base = 0.225;
+
+      // Minimale Differenzierung (nur als Platzhalter):
+      const cantonAdj = (canton === "ZH") ? -0.004 : (canton === "BE" ? +0.004 : 0.00);
+      return clamp(base + cantonAdj, 0.03, 0.30);
+    }
+
+    function compute(){
+      const netMonthly = num(document.getElementById("netMonthly").value);
+      const plz = (document.getElementById("plz").value || "").trim();
+      const canton = document.getElementById("canton").value;
+      const taxYear = document.getElementById("taxYear").value;
+
+      const rentMonthly = num(document.getElementById("rentMonthly").value);
+      const healthMonthly = num(document.getElementById("healthMonthly").value);
+      const insMonthly = num(document.getElementById("insMonthly").value);
+      const otherFixedMonthly = num(document.getElementById("otherFixedMonthly").value);
+
+      const customDeductions = document.getElementById("customDeductions").checked;
+      const deductionsYearly = customDeductions ? num(document.getElementById("deductionsYearly").value) : 0;
+      const extraTaxableYearly = customDeductions ? num(document.getElementById("extraTaxableYearly").value) : 0;
+
+      // 13. Monatslohn Konfiguration
+      const m13_1_month = Number(document.getElementById("m13_1_month").value || 0);
+      const m13_2_month = Number(document.getElementById("m13_2_month").value || 0);
+      const m13_1_pct = clamp(num(document.getElementById("m13_1_pct").value), 0, 100);
+      const m13_2_pct = clamp(num(document.getElementById("m13_2_pct").value), 0, 100);
+
+      // Jahres-Netto: 12x Netto + 13. (wenn Prozent-Summe > 0)
+      // 13. entspricht einem zusätzlichen Netto-Monatslohn * (Summe % / 100)
+      const thirteenthFactor = (m13_1_pct + m13_2_pct) / 100;
+      const netYear = (netMonthly * 12) + (netMonthly * thirteenthFactor);
+
+      // Pauschalabzug (v1): grob 8% vom Netto-Jahr, begrenzt
+      const standardDeduction = customDeductions ? 0 : clamp(netYear * 0.08, 4000, 12000);
+
+      // v1: approximiertes steuerbares Einkommen (nur Näherung)
+      const taxableYear = Math.max(0, netYear + extraTaxableYearly - (customDeductions ? deductionsYearly : standardDeduction));
+
+      const effRate = estimateEffectiveRate(taxableYear, canton);
+      const taxYearEst = taxableYear * effRate;
+      const taxMonthlyReserve = taxYearEst / 12;
+
+      const fixedMonthly = rentMonthly + healthMonthly + insMonthly + otherFixedMonthly;
+      const freeMonthlyAvg = netMonthly - fixedMonthly - taxMonthlyReserve;
+
+      // Outputs (KPIs)
+      document.getElementById("taxYearOut").textContent = chf(taxYearEst);
+      document.getElementById("taxMonthlyOut").textContent = chf(taxMonthlyReserve);
+      document.getElementById("fixedMonthlyOut").textContent = chf(fixedMonthly);
+      document.getElementById("freeMonthlyOut").textContent = chf(freeMonthlyAvg);
+
+      const baseExplain = customDeductions
+        ? `Jahr ${taxYear} | PLZ ${plz || "—"} | steuerbar≈Netto-Jahr + Zusatz − Abzüge | eff. Satz≈${(effRate*100).toFixed(1)}%`
+        : `Jahr ${taxYear} | PLZ ${plz || "—"} | pauschaler Abzug≈${chf(standardDeduction)} | eff. Satz≈${(effRate*100).toFixed(1)}%`;
+      document.getElementById("taxExplain").textContent = baseExplain;
+
+      // Monats-Cashflow
+      const tbody = document.getElementById("cashflowBody");
+      tbody.innerHTML = "";
+
+      // 13. Auszahlung je Monat
+      const add13 = Array(12).fill(0);
+      if (m13_1_month >= 1 && m13_1_month <= 12) add13[m13_1_month - 1] += netMonthly * (m13_1_pct / 100);
+      if (m13_2_month >= 1 && m13_2_month <= 12) add13[m13_2_month - 1] += netMonthly * (m13_2_pct / 100);
+
+      for (let i = 0; i < 12; i++){
+        const monthNet = netMonthly + add13[i];
+        const leftover = monthNet - fixedMonthly - taxMonthlyReserve;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${MONTHS[i]}</td>
+          <td>${chf(monthNet)}</td>
+          <td>${chf(fixedMonthly)}</td>
+          <td>${chf(taxMonthlyReserve)}</td>
+          <td>${chf(leftover)}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function syncDeductionsUI(){
+      const on = document.getElementById("customDeductions").checked;
+      document.getElementById("deductionsBox").style.display = on ? "block" : "none";
+    }
+
+    function save(){
+      const ids = [
+        "netMonthly","plz","canton","taxYear",
+        "rentMonthly","healthMonthly","insMonthly","otherFixedMonthly",
+        "deductionsYearly","extraTaxableYearly",
+        "m13_1_month","m13_1_pct","m13_2_month","m13_2_pct"
+      ];
+      const data = {};
+      ids.forEach(id => data[id] = document.getElementById(id).value);
+      data.customDeductions = document.getElementById("customDeductions").checked;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function load(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        Object.keys(data).forEach(k => {
+          const el = document.getElementById(k);
+          if(!el) return;
+          if(el.type === "checkbox") el.checked = !!data[k];
+          else el.value = data[k];
+        });
+        document.getElementById("customDeductions").checked = !!data.customDeductions;
+      }catch(e){}
+    }
+
+    function resetAll(){
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", compute);
+    document.getElementById("saveBtn").addEventListener("click", () => { save(); compute(); });
+    document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+    document.getElementById("customDeductions").addEventListener("change", () => { syncDeductionsUI(); compute(); });
+
+    load();
+    syncDeductionsUI();
+    compute();
+  </script>
+</body>
+</html>
